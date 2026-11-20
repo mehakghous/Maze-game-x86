@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clay Maze</title>
+<style>
+  :root {
+    --sky: #a9d8ff;
+    --sky-light: #e2f3ff;
+    --sky-deep: #74baf6;
+    --orange: #ff5200;
+    --orange-light: #ff8a1c;
+    --orange-deep: #d63a00;
+    --navy: #0a1f6b;
+    --navy-soft: #1b3fa8;
+    --radius: 28px;
+    --yellow: #ffd21f; --mint: #12d8a0; --purple: #7a5cff; --cyan: #10c4ff; --coral: #ff3d6e;
+
+    --clay: 10px 12px 24px rgba(40, 100, 190, .35), -8px -8px 18px rgba(255, 255, 255, .8),
+            inset -6px -6px 12px rgba(70, 130, 215, .22), inset 6px 6px 12px rgba(255, 255, 255, .75);
+    --clay-pressed: inset 6px 6px 12px rgba(40, 100, 190, .35), inset -5px -5px 10px rgba(255, 255, 255, .7);
+    --clay-orange: 8px 10px 20px rgba(255, 82, 0, .45), -6px -6px 14px rgba(255, 255, 255, .7),
+            inset -5px -5px 10px rgba(190, 45, 0, .35), inset 5px 5px 10px rgba(255, 205, 140, .75);
+    --clay-black: 8px 10px 20px rgba(10, 31, 107, .45), -6px -6px 14px rgba(255, 255, 255, .7),
+            inset -5px -5px 10px rgba(0, 10, 70, .6), inset 5px 5px 10px rgba(90, 125, 225, .6);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 28px 16px 48px;
+    background: radial-gradient(circle at 10% 8%, #ffffff, transparent 38%), radial-gradient(circle at 92% 90%, rgba(16,196,255,.45), transparent 45%), linear-gradient(160deg, var(--sky-light), var(--sky) 55%, var(--sky-deep));
+    background-attachment: fixed;
+    font-family: "Trebuchet MS", "Segoe UI Rounded", "Segoe UI", system-ui, sans-serif;
+    color: var(--navy); display: flex; flex-direction: column; align-items: center;
+  }
+  .app { width: min(1000px, 100%); display: grid; gap: 24px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .app { grid-template-columns: auto 300px; align-items: start; } header { grid-column: 1 / -1; } }
+  header { text-align: center; }
+  h1 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 1px; color: var(--navy); text-shadow: 3px 3px 0 var(--sky-light), 5px 5px 8px rgba(40,100,190,.35); }
+  h1 span { color: var(--orange); }
+  header p { margin: 6px 0 0; color: var(--navy-soft); font-weight: 600; }
+
+  .panel { background: var(--sky); border-radius: var(--radius); box-shadow: var(--clay); padding: 22px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--sky-light); border-radius: 20px; box-shadow: var(--clay-pressed); padding: 10px 6px; text-align: center; }
+  .stat small { display: block; font-size: .68rem; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--navy-soft); opacity: .75; }
+  .stat b { font-size: 1.5rem; }
+  .stat.hot b { color: var(--orange-deep); }
+  .hearts { letter-spacing: 2px; font-size: 1.2rem; color: var(--coral); }
+
+  .board-wrap { background: var(--sky-deep); border-radius: 30px; padding: 14px; box-shadow: var(--clay-pressed); }
+  .board { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-auto-rows: auto; gap: 6px; width: min(76vw, 540px); margin: auto; }
+  .cell {
+    aspect-ratio: 1 / 1; min-width: 0; min-height: 0; line-height: 1; overflow: visible;
+    border-radius: 16px; background: var(--sky-light); display: grid; place-items: center;
+    font-size: clamp(.9rem, 3.4vw, 1.6rem); font-weight: 900; user-select: none;
+    box-shadow: 3px 4px 8px rgba(40,100,190,.28), -2px -2px 6px rgba(255,255,255,.8), inset 2px 2px 4px rgba(255,255,255,.8), inset -2px -2px 4px rgba(70,130,215,.18);
+    transition: transform .12s;
+  }
+  .cell.player { background: var(--orange); color: #fff; box-shadow: var(--clay-orange); z-index: 1; }
+  .cell.player.shield { outline: 4px solid var(--navy); outline-offset: 2px; animation: pulse .8s infinite alternate; }
+  .cell.obstacle { background: var(--navy); color: var(--sky); box-shadow: var(--clay-black); }
+  .cell.coin { color: var(--navy); background: var(--yellow); box-shadow: 4px 5px 10px rgba(200,150,0,.45), -2px -2px 6px rgba(255,255,255,.8), inset 2px 2px 4px rgba(255,255,255,.7), inset -3px -3px 5px rgba(200,140,0,.35); }
+  .cell.power { color: #fff; background: var(--purple); box-shadow: 4px 5px 10px rgba(90,60,230,.5), inset 2px 2px 4px rgba(255,255,255,.45), inset -3px -3px 5px rgba(50,20,170,.4); }
+  .cell.goal { background: linear-gradient(135deg, #5af0c4, var(--mint)); color: var(--navy); box-shadow: 4px 5px 10px rgba(0,160,120,.5), inset 2px 2px 4px rgba(255,255,255,.55), inset -3px -3px 5px rgba(0,120,90,.35); }
+  @keyframes pulse { to { outline-offset: 5px; } }
+
+  .side { display: grid; gap: 20px; }
+  h2 { margin: 0 0 12px; font-size: 1rem; letter-spacing: 1.5px; text-transform: uppercase; }
+  .pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 64px); gap: 10px; justify-content: center; }
+  .pad .up { grid-column: 2; } .pad .left { grid-column: 1; grid-row: 2; } .pad .down { grid-column: 2; grid-row: 2; } .pad .right { grid-column: 3; grid-row: 2; }
+  button {
+    font: inherit; font-weight: 800; cursor: pointer; border: 0; color: var(--navy);
+    background: var(--sky); border-radius: 22px; padding: 12px 16px; box-shadow: var(--clay); transition: transform .1s, box-shadow .1s;
+  }
+  button:hover { transform: translateY(-2px); }
+  button:active { transform: translateY(1px); box-shadow: var(--clay-pressed); }
+  button.primary { background: var(--orange); color: #fff; box-shadow: var(--clay-orange); }
+  button.dark { background: var(--navy); color: var(--sky); box-shadow: var(--clay-black); }
+  button:focus-visible { outline: 3px solid var(--navy); outline-offset: 3px; }
+  .pad button { font-size: 1.5rem; padding: 0; border-radius: 20px; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btns .wide { grid-column: 1 / -1; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; font-size: .85rem; font-weight: 700; }
+  .legend i { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 8px; border-radius: 9px; font-style: normal; font-size: .8rem; background: var(--sky-light); box-shadow: 2px 2px 4px rgba(40,100,190,.3), inset 1px 1px 2px #fff; }
+  .legend .p i { background: var(--orange); color: #fff; } .legend .x i { background: var(--navy); color: var(--sky); }
+  .legend .g i { background: var(--mint); } .legend .a i { background: var(--purple); color: #fff; } .legend .c i { background: var(--yellow); }
+  .toast { min-height: 44px; margin-top: 16px; background: var(--navy); color: var(--sky); border-radius: 18px; padding: 12px 16px; font-weight: 700; text-align: center; box-shadow: var(--clay-black); }
+
+  .flash { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none; z-index: 9;
+           background: var(--navy); color: #fff; font-weight: 800; padding: 14px 26px; border-radius: 22px; box-shadow: var(--clay-black);
+           border-bottom: 4px solid var(--orange); transition: opacity .2s, transform .2s; max-width: 92vw; text-align: center; }
+  .flash.show { opacity: 1; transform: translate(-50%, 0); }
+  .slot { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 12px; text-align: left; padding: 14px 18px; }
+  .slot b { font-size: 1.05rem; } .slot small { display: block; font-weight: 700; opacity: .75; }
+  .slot.empty { opacity: .6; }
+  .slot[disabled] { cursor: not-allowed; opacity: .45; transform: none; }
+  .slot .tag { font-size: .72rem; letter-spacing: 1px; text-transform: uppercase; padding: 4px 12px; border-radius: 999px; background: var(--yellow); color: var(--navy); }
+  .slot.empty .tag { background: var(--sky-light); }
+  .overlay { position: fixed; inset: 0; display: none; place-items: center; background: rgba(10,31,107,.55); backdrop-filter: blur(4px); padding: 16px; z-index: 5; }
+  .overlay.show { display: grid; }
+  .modal { background: var(--sky); border-radius: 36px; box-shadow: var(--clay); padding: 34px 30px; text-align: center; width: min(420px, 100%); }
+  .modal h2 { font-size: 1.8rem; letter-spacing: 1px; margin-bottom: 8px; }
+  .modal p { margin: 6px 0; font-weight: 700; }
+  .modal .row { display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+
+  .dash { grid-column: 1 / -1; }
+  .dash-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .dash-head h2 { margin: 0; font-size: 1.25rem; }
+  .dash-head small { font-weight: 700; opacity: .7; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .tile { background: var(--sky-light); border-radius: 22px; box-shadow: var(--clay); padding: 14px 10px; text-align: center; }
+  .tile small { display: block; font-size: .68rem; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; opacity: .7; }
+  .tile b { font-size: 1.9rem; }
+  .tile.orange { background: var(--orange); color: #fff; box-shadow: var(--clay-orange); }
+  .tile.mint { background: var(--mint); color: var(--navy); }
+  .tile.coral { background: var(--coral); color: #fff; }
+  .tile.yellow { background: var(--yellow); color: var(--navy); }
+  .tile.purple { background: var(--purple); color: #fff; }
+  .tile.cyan { background: var(--cyan); color: var(--navy); }
+  .tile.black { background: var(--navy); color: var(--sky); box-shadow: var(--clay-black); }
+  .dash-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 800px) { .dash-grid { grid-template-columns: 1fr 1fr; } }
+  .box { background: var(--sky-light); border-radius: 24px; box-shadow: var(--clay-pressed); padding: 16px; }
+  .box h3 { margin: 0 0 12px; font-size: .85rem; letter-spacing: 1.4px; text-transform: uppercase; }
+  .chart { display: flex; align-items: flex-end; gap: 10px; height: 160px; }
+  .bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; font-size: .72rem; font-weight: 800; }
+  .bar i { display: block; width: 100%; min-height: 6px; border-radius: 12px 12px 6px 6px; background: linear-gradient(180deg, var(--orange-light), var(--orange)); box-shadow: var(--clay-orange); }
+  .bar.lost i { background: var(--navy); box-shadow: var(--clay-black); }
+  table { width: 100%; border-collapse: collapse; font-weight: 700; font-size: .9rem; }
+  th { text-align: left; font-size: .7rem; letter-spacing: 1.2px; text-transform: uppercase; opacity: .7; padding: 4px 6px; }
+  td { padding: 7px 6px; border-top: 2px solid rgba(116,186,245,.55); }
+  .pill { display: inline-block; padding: 2px 12px; border-radius: 999px; font-size: .75rem; color: var(--navy); background: var(--mint); box-shadow: inset 2px 2px 3px rgba(255,255,255,.4); }
+  .pill.lost { background: var(--navy); color: var(--sky); }
+  .empty { text-align: center; padding: 24px 8px; font-weight: 700; opacity: .65; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>CLAY <span>MAZE</span></h1>
+    <p>Collect coins, grab the power-up, dodge the X blocks and reach the goal. Engine: x86 assembly.</p>
+  </header>
+
+  <main class="panel">
+    <div class="stats">
+      <div class="stat"><small>Lives</small><b class="hearts" id="lives"></b></div>
+      <div class="stat"><small>Score</small><b id="score">0</b></div>
+      <div class="stat"><small>Moves</small><b id="moves">0</b></div>
+      <div class="stat hot"><small>Best</small><b id="best">0</b></div>
+    </div>
+    <div class="board-wrap"><div class="board" id="board" role="grid" aria-label="Game board"></div></div>
+    <div class="toast" id="toast" role="status" aria-live="polite">Use W A S D or the arrow keys to move.</div>
+  </main>
+
+  <aside class="side">
+    <section class="panel">
+      <h2>Move</h2>
+      <div class="pad">
+        <button class="up" data-dir="w" aria-label="Up">▲</button>
+        <button class="left" data-dir="a" aria-label="Left">◀</button>
+        <button class="down" data-dir="s" aria-label="Down">▼</button>
+        <button class="right" data-dir="d" aria-label="Right">▶</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Files</h2>
+      <div class="btns">
+        <button id="saveBtn" class="primary">Save game</button>
+        <button id="loadBtn">Load game</button>
+        <button id="restartBtn" class="dark">New game</button>
+        <button id="quitBtn">Quit</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Legend</h2>
+      <div class="legend">
+        <span class="p"><i>P</i>You</span><span class="g"><i>G</i>Goal +50</span>
+        <span class="x"><i>X</i>Obstacle</span><span class="c"><i>$</i>Coin +10</span>
+        <span class="a"><i>@</i>Shield (5)</span><span><i>·</i>Free tile</span>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<section class="panel dash" style="width:min(1000px,100%);margin:24px auto 0">
+  <div class="dash-head">
+    <h2>Dashboard</h2>
+    <span><small>Read from history.dat by the assembly engine</small> &nbsp; <button id="clearBtn" class="dark">Clear history</button></span>
+  </div>
+  <div class="tiles">
+    <div class="tile orange"><small>Games</small><b id="dGames">0</b></div>
+    <div class="tile mint"><small>Wins</small><b id="dWins">0</b></div>
+    <div class="tile coral"><small>Losses</small><b id="dLoss">0</b></div>
+    <div class="tile black"><small>Win rate</small><b id="dRate">0%</b></div>
+    <div class="tile yellow"><small>Best score</small><b id="dBest">0</b></div>
+    <div class="tile purple"><small>Avg score</small><b id="dAvg">0</b></div>
+    <div class="tile cyan"><small>Total moves</small><b id="dMoves">0</b></div>
+  </div>
+  <div class="dash-grid">
+    <div class="box"><h3>Last 10 scores (oldest → newest)</h3><div class="chart" id="dChart"></div></div>
+    <div class="box"><h3>Recent games</h3><div id="dTable"></div></div>
+  </div>
+</section>
+
+<div class="overlay" id="slotOverlay">
+  <div class="modal">
+    <h2 id="slotTitle">Save game</h2>
+    <p id="slotHint"></p>
+    <div id="slotList"></div>
+    <div class="row"><button id="slotCancel">Cancel</button></div>
+  </div>
+</div>
+
+<div class="flash" id="flash" role="status" aria-live="polite"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="mTitle"></h2>
+    <p id="mBody"></p>
+    <div class="row"><button class="primary" id="mAgain">Play again</button></div>
+  </div>
+</div>
+
+<script>
+
+const MSGS = {
+  1: "Coin collected! +10 points", 2: "Power-up! You're invincible for 5 moves!",
+  3: "You hit an obstacle! Lost 1 life.", 4: "You reached the goal! +50 bonus",
+  5: "You ran out of lives!", 6: "Game saved to savegame.dat", 7: "Game loaded from savegame.dat",
+  8: "Could not write savegame.dat", 9: "No valid save file found."
+};
+const $ = id => document.getElementById(id);
+let g = null;
+
+let flashTimer;
+function toast(m) {
+  $("toast").textContent = m;
+
+  const f = $("flash"); f.textContent = m; f.classList.add("show");
+  clearTimeout(flashTimer); flashTimer = setTimeout(() => f.classList.remove("show"), 2500);
+}
+
+async function api(path) {
+  try {
+    const r = await fetch(path, { cache: "no-store" });
+    g = await r.json();
+    draw();
+    return g;
+  } catch (e) { toast("Lost connection to the assembly engine. Re-run ClayMaze.exe."); }
+}
+
+function draw() {
+  if (!g || g.size === undefined) return;
+  const at = (list, x, y) => list.some(p => p[0] === x && p[1] === y);
+  const b = $("board"); b.textContent = "";
+  for (let x = 1; x <= g.size; x++) for (let y = 1; y <= g.size; y++) {
+    const c = document.createElement("div"); c.className = "cell"; c.setAttribute("role", "gridcell");
+    if (x === g.x && y === g.y) { c.classList.add("player"); if (g.shield > 0) c.classList.add("shield"); c.textContent = "P"; }
+    else if (at(g.obs, x, y)) { c.classList.add("obstacle"); c.textContent = "X"; }
+    else if (x === g.goal[0] && y === g.goal[1]) { c.classList.add("goal"); c.textContent = "G"; }
+    else if (g.coinpos.some((p, i) => !g.coins[i] && p[0] === x && p[1] === y)) { c.classList.add("coin"); c.textContent = "$"; }
+    else if (!g.power && x === g.powerpos[0] && y === g.powerpos[1]) { c.classList.add("power"); c.textContent = "@"; }
+    b.appendChild(c);
+  }
+  $("lives").textContent = "♥".repeat(Math.max(g.lives, 0)) || "–";
+  $("score").textContent = g.score; $("moves").textContent = g.moves; $("best").textContent = g.best;
+  if (g.state !== 0) {
+    $("mTitle").textContent = g.state === 1 ? "You won!" : "Game over";
+    $("mBody").textContent = "Score " + g.score + " · Moves " + g.moves + "." + (g.newbest ? " New high score saved!" : "") + (g.removed ? " Your save in slot " + g.removed + " was removed." : "");
+    $("overlay").classList.add("show");
+  } else $("overlay").classList.remove("show");
+  if (g.state !== lastState) { lastState = g.state; loadDash(); }
+}
+
+let lastState = 0;
+async function loadDash(path) {
+  try {
+    const h = await (await fetch(path || "/api/history", { cache: "no-store" })).json();
+    $("dGames").textContent = h.games; $("dWins").textContent = h.wins; $("dLoss").textContent = h.losses;
+    $("dRate").textContent = h.winrate + "%"; $("dBest").textContent = h.best;
+    $("dAvg").textContent = h.avg; $("dMoves").textContent = h.moves;
+    const chart = $("dChart"), table = $("dTable"); chart.textContent = ""; table.textContent = "";
+    if (!h.recent.length) {
+      chart.innerHTML = table.innerHTML = '<div class="empty">No finished games yet. Win or lose a game to fill the dashboard.</div>';
+      return;
+    }
+    const top = Math.max(1, ...h.recent.map(r => r[0]));
+    [...h.recent].reverse().forEach(r => {
+      const b = document.createElement("div"); b.className = "bar" + (r[2] === 2 ? " lost" : "");
+      b.innerHTML = "<span>" + r[0] + "</span><i style='height:" + Math.round(r[0] / top * 120 + 6) + "px'></i>";
+      chart.appendChild(b);
+    });
+    let rows = "<table><tr><th>#</th><th>Score</th><th>Moves</th><th>Result</th></tr>";
+    h.recent.forEach((r, i) => {
+      rows += "<tr><td>" + (h.games - i) + "</td><td>" + r[0] + "</td><td>" + r[1] + "</td><td><span class='pill" +
+        (r[2] === 2 ? " lost'>Lost" : "'>Won") + "</span></td></tr>";
+    });
+    table.innerHTML = rows + "</table>";
+  } catch (e) {}
+}
+
+async function openSlots(mode) {
+  let info;
+  try { info = await (await fetch("/api/slots", { cache: "no-store" })).json(); }
+  catch (e) { return toast("Lost connection to the assembly engine."); }
+  $("slotTitle").textContent = mode === "save" ? "Save game" : "Load game";
+  $("slotHint").textContent = mode === "save" ? "Pick a slot. Saving over a used slot replaces it." : "Pick the save you want to continue.";
+  const list = $("slotList"); list.textContent = "";
+  info.slots.forEach((s, i) => {
+    const n = i + 1, used = s[0] === 1;
+    const b = document.createElement("button");
+    b.className = "slot" + (used ? "" : " empty");
+    b.disabled = mode === "load" && !used;
+    b.innerHTML = "<span><b>Slot " + n + "</b><small>" +
+      (used ? "Score " + s[1] + " · Moves " + s[2] + " · Lives " + s[3] : "Empty") + "</small></span>" +
+      "<span class='tag'>" + (mode === "save" ? (used ? "Overwrite" : "Save here") : "Load") + "</span>";
+    b.onclick = async () => {
+      closeSlots();
+      const r = await api("/api/" + mode + "?s=" + n);
+      if (r && r.msg) toast(MSGS[r.msg].replace("savegame.dat", "slot " + n));
+    };
+    list.appendChild(b);
+  });
+  $("slotOverlay").classList.add("show");
+}
+function closeSlots() { $("slotOverlay").classList.remove("show"); }
+
+let clearArmed = null;
+$("clearBtn").onclick = async () => {
+  const b = $("clearBtn");
+  if (!clearArmed) {
+    b.textContent = "Click again to delete all";
+    b.style.background = "var(--coral)"; b.style.color = "#fff";
+    clearArmed = setTimeout(resetClear, 4000);
+    return;
+  }
+  clearTimeout(clearArmed);
+  await loadDash("/api/clear");
+  resetClear();
+  toast("History cleared (history.dat emptied).");
+};
+function resetClear() {
+  const b = $("clearBtn");
+  clearArmed = null; b.textContent = "Clear history"; b.style.background = ""; b.style.color = "";
+}
+
+function keepInView() {
+  const p = document.querySelector(".cell.player"); if (!p) return;
+  const r = p.getBoundingClientRect(), margin = 120;
+  if (r.top < margin || r.bottom > innerHeight - margin)
+    scrollBy(0, r.top + r.height / 2 - innerHeight / 2);
+}
+async function move(k) {
+  const r = await api("/api/move?k=" + k);
+  if (!r) return;
+  keepInView();
+  if (r.msg) toast(MSGS[r.msg]);
+  else if (r.shield > 0) toast("Shield: " + r.shield + " move" + (r.shield > 1 ? "s" : "") + " left");
+}
+async function command(path) { const r = await api(path); if (r && r.msg) toast(MSGS[r.msg]); }
+
+document.addEventListener("keydown", e => {
+  const m = { arrowup: "w", arrowdown: "s", arrowleft: "a", arrowright: "d" };
+  const k = m[e.key.toLowerCase()] || e.key.toLowerCase();
+  if ($("slotOverlay").classList.contains("show")) { if (k === "escape") closeSlots(); return; }
+  if (k.length === 1 && "wasd".includes(k)) { e.preventDefault(); move(k); }
+  else if (k === "f") openSlots("save");
+  else if (k === "l") openSlots("load");
+  else if (k === "escape") closeSlots();
+});
+document.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => move(b.dataset.dir)));
+$("saveBtn").onclick = () => openSlots("save");
+$("loadBtn").onclick = () => openSlots("load");
+$("slotCancel").onclick = closeSlots;
+$("restartBtn").onclick = () => { command("/api/new"); toast("Use W A S D or the arrow keys to move."); };
+$("mAgain").onclick = () => { command("/api/new"); toast("Use W A S D or the arrow keys to move."); };
+$("quitBtn").onclick = async () => { try { await fetch("/api/quit"); } catch (e) {} document.body.innerHTML = "<p style='font:700 1.4rem sans-serif;text-align:center;margin-top:20vh'>Engine stopped. You can close this tab.</p>"; };
+
+api("/api/state");
+loadDash();
+setInterval(() => api("/api/state"), 3000);
+</script>
+</body>
+</html>
