@@ -1,19 +1,16 @@
 # Clay Maze
 
-A maze game written in **x86 assembly (MASM)**. Move through a 10x10 board, collect coins, grab the power-up, dodge the obstacles and reach the goal. The project has two front ends that share the same rules:
+A maze game whose engine is written in **x86 assembly (MASM)**, shown through a claymorphism web interface (baby blue, dark blue, orange) with a statistics dashboard. Move through a 10x10 board, collect coins, grab the power-up, dodge the obstacles and reach the goal.
 
-- **Clay Maze (GUI)**: a claymorphism web interface (baby blue, dark blue, orange) with a statistics dashboard.
-- **Console version**: the original text game, with colours and file saving.
-
-## Run the GUI version
+## Run
 
 1. Double-click `ClayMaze.exe`.
-2. Your browser opens at `http://127.0.0.1:8765/`.
+2. Your default browser opens at `http://127.0.0.1:8765/`.
 3. Play with **W A S D** or the arrow keys, or use the on-screen buttons.
 
 Keep `ClayMaze.exe` next to the `ui` folder. Press **Quit** (or close the tab and wait two minutes) to stop the game engine.
 
-### How it works
+## How it works
 
 All game logic is in assembly (`ClayMaze/ClayMaze.asm`). The program is also a tiny HTTP server that listens on `127.0.0.1:8765` using Winsock. The web page in `ui/index.html` contains no game rules: it sends key presses to the engine and draws the JSON state the engine returns.
 
@@ -56,16 +53,7 @@ All files are written next to `ClayMaze.exe`.
 
 When a game that was loaded from a slot ends, that slot is deleted, because the save no longer leads anywhere. The dashboard reads `history.dat` and shows games played, wins, losses, win rate, best and average score, total moves, a score chart and the recent games.
 
-## Console version
-
-`Console_Game_Project/` is a Visual Studio solution that uses the Irvine32 library.
-
-1. Install the Irvine32 library to `C:\Irvine`.
-2. Open `Console_Game_Project/Console_Game_Project.sln` in Visual Studio (Debug, x86) and press Ctrl+F5.
-
-Controls: W/A/S/D move, F saves, L loads, Q quits. It keeps a single save in `savegame.dat` and the best score in `highscore.dat`, both in the working folder.
-
-## Build the GUI version from source
+## Build from source
 
 Requires Visual Studio with the C++ desktop workload (MASM and the Windows SDK).
 
@@ -78,9 +66,8 @@ This assembles `ClayMaze/ClayMaze.asm` and links `ClayMaze.exe` against `kernel3
 ## Project layout
 
 ```
-ClayMaze/                 assembly engine + web server
-ui/index.html             claymorphism interface and dashboard
-Console_Game_Project/     console version (Visual Studio solution)
-build.ps1                 builds ClayMaze.exe
-ClayMaze.exe              prebuilt GUI version
+ClayMaze/       assembly engine + web server
+ui/index.html   claymorphism interface and dashboard
+build.ps1       builds ClayMaze.exe
+ClayMaze.exe    prebuilt game
 ```
